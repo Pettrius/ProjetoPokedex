@@ -7,3 +7,4 @@ Este repositório contém o conteúdo desenvolvido para simular a pokedex.
 ## 🚀 Tecnologias utilizadas
 
 - C++
+- Utilizado conceitos como grafos ponderados e árvores binárias.
