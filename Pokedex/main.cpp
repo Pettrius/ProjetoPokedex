@@ -1,49 +1,44 @@
+/*
+AUGUSTO LEITE DEL CARLO CARNEIRO - 866 - GES
+PETTRIUS VILAS BOAS DE PAIVA CARDOSO - 854 - GES
+SOLANGE RIBEIRO DA FONSECA - 528 - GES
+*/
+
 #include <iostream>  
 #include <string>  
-#include <list>
   
 using namespace std;
 
 #define MAX_CIDADES 100 // Numero maximo de cidades que podem ser cadastradas
 
-void cadastrarCidade(string nome) {
-    cout << "Funcionalidade em construcao..." << endl;
-}
+// --- INICIO DA ENTREGA 3: Estrutura e Arvore Binaria de Busca de Pokemons ---
 
-void cadastrarEstrada(string nome) {
-    cout << "Funcionalidade em construcao..." << endl;
-}
+// struct para armazenar os dados de cada Pokemon
+struct Pokemon 
+{
+    int numero;       // Numero da Pokedex
+    string nome;
+    string tipo;
+    int loc_x;        // Localizacao (coordenada x)
+    int loc_y;        // Localizacao (coordenada y)
+};
 
-void buscarCentroPokemonMaisProximo(string nomeCidade) {
-    cout << "Funcionalidade em construcao..." << endl;
-}
+// Estrutura de no da Arvore Binaria de Busca
+struct NoPokemon 
+{
+    Pokemon dados;           // Dados do Pokemon
+    NoPokemon* esquerda;     // Ponteiro para subarvore esquerda
+    NoPokemon* direita;      // Ponteiro para subarvore direita
+};
 
-void cadastrarPokemon(string nome, string tipo) {
-    cout << "Funcionalidade em construcao..." << endl;
-}
+// Raiz da arvore (inicialmente vazia)
+NoPokemon* raizPokedex = nullptr;
 
-void removerPokemon(string nome) {
-    cout << "Funcionalidade em construcao..." << endl;
-}
+// --- FIM DA ENTREGA 3 ---
 
-void listarPokemonsNome(string nome) {
-    cout << "Funcionalidade em construcao..." << endl;
-}
 
-void listarPokemonsTipo(string tipo) {
-    cout << "Funcionalidade em construcao..." << endl;
-}
-
-int contarPokemonsTipo(int qtdTipo) {
-    cout << "Funcionalidade em construcao..." << endl;
-    return 0;
-}
-
-void encontrarPokemonsProximos(string localizacao) {
-    cout << "Funcionalidade em construcao..." << endl;
-}
-
-struct Cidade // struct de cadastro de cidade no grafo
+// struct de cadastro de cidade no grafo
+struct Cidade 
 {
     int codigo;       // Codigo da cidade
     string nome;      // Nome da cidade
@@ -53,12 +48,14 @@ struct Cidade // struct de cadastro de cidade no grafo
 
 Cidade cidades[MAX_CIDADES];  // Vetor para armazenar todas as cidades
 
-// Matriz de adjac�ncia: 1 indica estrada entre duas cidades, 0 indica aus�ncia
+// --- MODIFICACAO (Entrega 2): Matriz de Adjacencia ---
+// Agora a matriz guarda o PESO (distancia) da estrada.
+// 0 significa que nao ha estrada.
 int matrizAdj[MAX_CIDADES][MAX_CIDADES];
 
 int totalCidades = 0;   // Contador de quantas cidades foram cadastradas
 
-// Funcao auxiliar que retorna o indice da cidade pelo codigo
+// Funcao auxiliar que retorna o indice da cidade pelo codigo (sem alteracao)
 int indicePorCodigo(int codigo)  
 {
     for (int i = 0; i < totalCidades; i++) {
@@ -68,7 +65,7 @@ int indicePorCodigo(int codigo)
     return -1; // Retorna -1 se nao encontrar
 }
 
-// Funcao para cadastrar uma nova cidade
+// Funcao para cadastrar uma nova cidade (sem alteracao)
 void cadastrarCidade() 
 {
     if (totalCidades >= MAX_CIDADES) {
@@ -102,7 +99,7 @@ void cadastrarCidade()
     cidades[totalCidades].temCentro = (resp == 's' || resp == 'S');
     cidades[totalCidades].existe = true;
 
-    // Inicializa conexoes (sem estradas ainda)
+    // Inicializa conexoes (sem estradas ainda, valor 0)
     for (int j = 0; j < MAX_CIDADES; j++) 
 	{
       matrizAdj[totalCidades][j] = matrizAdj[j][totalCidades] = 0;	
@@ -113,18 +110,25 @@ void cadastrarCidade()
     totalCidades++; // Incrementa o total de cidades
 }
 
-// Funcao para cadastrar estrada entre duas cidades
+// --- MODIFICACAO (Entrega 2): Cadastrar Estrada com Peso (Distancia) ---
 void cadastrarEstrada() {
     if (totalCidades < 2) {
         cout << "E necessario ao menos duas cidades cadastradas." << endl;
         return;
     }
 
-    int codA, codB;
+    int codA, codB, distancia; // Adicionada a variavel 'distancia'
     cout << "Informe o codigo da primeira cidade: ";
     cin >> codA;
     cout << "Informe o codigo da segunda cidade: ";
     cin >> codB;
+    cout << "Informe a distancia da estrada: "; // Pede a nova informacao
+    cin >> distancia;
+
+    if (distancia <= 0) {
+        cout << "Distancia invalida." << endl;
+        return;
+    }
 
     int a = indicePorCodigo(codA);
     int b = indicePorCodigo(codB);
@@ -141,15 +145,29 @@ void cadastrarEstrada() {
         return;
     }
 
-    // Marca estrada entre as cidades (grafo nao-direcionado)
-    matrizAdj[a][b] = 1;
-    matrizAdj[b][a] = 1;
+    // Marca a distancia da estrada entre as cidades (grafo nao-direcionado)
+    matrizAdj[a][b] = distancia;
+    matrizAdj[b][a] = distancia;
 
     cout << "Estrada cadastrada entre [" << codA << "] " << cidades[a].nome
-         << " <-> [" << codB << "] " << cidades[b].nome << endl;
+         << " <-> [" << codB << "] " << cidades[b].nome << " com distancia " << distancia << endl;
 }
 
-// Busca o Centro Pok�mon mais proximo usando BFS
+// Funcao auxiliar para o Dijkstra: encontra o vertice nao visitado com menor distancia
+int encontrarMinDistancia(int dist[], bool visitado[]) {
+    int min = 2147483647; // Representa "infinito"
+    int min_indice = -1;
+
+    for (int v = 0; v < totalCidades; v++) {
+        if (!visitado[v] && dist[v] <= min) {
+            min = dist[v];
+            min_indice = v;
+        }
+    }
+    return min_indice;
+}
+
+// --- MODIFICACAO (Entrega 2): Busca com Algoritmo de Dijkstra ---
 void buscarCentroPokemonMaisProximo() {
     if (totalCidades == 0) {
         cout << "Nenhuma cidade cadastrada." << endl;
@@ -172,41 +190,49 @@ void buscarCentroPokemonMaisProximo() {
         return;
     }
 
-    bool visitado[MAX_CIDADES];
-    int pai[MAX_CIDADES];
+    // Vetores de controle para o Dijkstra
+    int dist[MAX_CIDADES]; // Armazena a menor distancia de 'start' ate 'i'
+    bool visitado[MAX_CIDADES]; // Marca se o vertice 'i' ja foi visitado
+    int pai[MAX_CIDADES]; // Armazena o pai do vertice 'i' no caminho mais curto
 
-    
-    for (int i = 0; i < totalCidades; i++)  // Inicializa vetores de controle
+    // Inicializa vetores de controle
+    for (int i = 0; i < totalCidades; i++)  
 	{
+        dist[i] = 2147483647; // Distancia infinita
         visitado[i] = false;
         pai[i] = -1;
     }
 
-    // Implementacao manual de fila
-    int fila[MAX_CIDADES];
-    int ini = 0, fim = 0;
+    // A distancia da cidade inicial para ela mesma e 0
+    dist[start] = 0;
 
-    // Comeca a BFS na cidade atual
-    fila[fim++] = start;
-    visitado[start] = true;
+    int destino = -1; // Guarda o indice do centro pokemon encontrado
 
-    int destino = -1; // Cidade com centro encontrada
+    // Loop principal do Dijkstra
+    for (int count = 0; count < totalCidades; count++) {
+        // Pega o vertice com a menor distancia (que ainda nao foi visitado)
+        int u = encontrarMinDistancia(dist, visitado);
 
-    while (ini < fim) {
-        int atual = fila[ini++];
+        if (u == -1) break; // Se nao ha mais vertices alcancaveis
 
-        if (cidades[atual].temCentro) // Se encontrou cidade com centro, para
-		{
-            destino = atual;
-            break;
+        visitado[u] = true; // Marca o vertice como visitado
+
+        // Se o vertice 'u' tem um centro pokemon, encontramos o mais proximo!
+        if (cidades[u].temCentro) {
+            destino = u;
+            break; // Para o loop principal, pois Dijkstra encontra o mais proximo primeiro
         }
 
-        for (int v = 0; v < totalCidades; v++) // Percorre vizinhos
-		{
-            if (matrizAdj[atual][v] == 1 && !visitado[v]) {
-                visitado[v] = true;
-                pai[v] = atual;
-                fila[fim++] = v;
+        // Atualiza a distancia dos vizinhos de 'u'
+        for (int v = 0; v < totalCidades; v++) {
+            // Se 'v' e um vizinho (tem estrada), nao foi visitado,
+            // e o novo caminho (passando por 'u') e mais curto
+            if (matrizAdj[u][v] != 0 && !visitado[v] && 
+                dist[u] + matrizAdj[u][v] < dist[v]) 
+            {
+                // Atualiza a distancia e o pai
+                dist[v] = dist[u] + matrizAdj[u][v];
+                pai[v] = u;
             }
         }
     }
@@ -216,7 +242,7 @@ void buscarCentroPokemonMaisProximo() {
         return;
     }
 
-    // Reconstroi o caminho percorrendo os pais
+    // Reconstroi o caminho percorrendo os pais (igual ao BFS)
     int caminho[MAX_CIDADES];
     int tam = 0;
     for (int v = destino; v != -1; v = pai[v]) {
@@ -224,7 +250,7 @@ void buscarCentroPokemonMaisProximo() {
     }
 
     // Exibe a rota (do inicio ao destino)
-    cout << "Rota ate o Centro Pokemon mais proximo:" << endl;
+    cout << "Rota ate o Centro Pokemon mais proximo (Distancia: " << dist[destino] << "):" << endl;
     for (int i = tam - 1; i >= 0; i--) {
         cout << "[" << cidades[caminho[i]].codigo << "] " << cidades[caminho[i]].nome;
         if (i > 0) cout << " -> ";
@@ -232,12 +258,156 @@ void buscarCentroPokemonMaisProximo() {
     cout << endl;
 }
 
-void cadastrarPokemon() { cout << "Funcionalidade Pokemon nao implementada ainda." << endl; }
-void removerPokemon() { cout << "Funcionalidade Pokemon nao implementada ainda." << endl; }
-void listarPokemonsNome() { cout << "Funcionalidade Pokemon nao implementada ainda." << endl; }
-void listarPokemonsTipo() { cout << "Funcionalidade Pokemon nao implementada ainda." << endl; }
-void contarPokemonsTipo() { cout << "Funcionalidade Pokemon nao implementada ainda." << endl; }
-void encontrarPokemonsProximos() { cout << "Funcionalidade Pokemon nao implementada ainda." << endl; }
+// --- INICIO DA ENTREGA 3: Funcoes da Arvore Binaria de Busca ---
+
+// Funcao auxiliar para criar um novo no da arvore
+NoPokemon* criarNo(Pokemon pokemon) {
+    NoPokemon* novoNo = new NoPokemon;
+    novoNo->dados = pokemon;
+    novoNo->esquerda = nullptr;
+    novoNo->direita = nullptr;
+    return novoNo;
+}
+
+// Funcao auxiliar recursiva para inserir um Pokemon na arvore
+NoPokemon* inserirNaArvore(NoPokemon* raiz, Pokemon pokemon) {
+    // Caso base: arvore vazia, cria novo no
+    if (raiz == nullptr) {
+        return criarNo(pokemon);
+    }
+    
+    // Se o numero do pokemon e menor, insere na subarvore esquerda
+    if (pokemon.numero < raiz->dados.numero) {
+        raiz->esquerda = inserirNaArvore(raiz->esquerda, pokemon);
+    }
+    // Se o numero do pokemon e maior, insere na subarvore direita
+    else if (pokemon.numero > raiz->dados.numero) {
+        raiz->direita = inserirNaArvore(raiz->direita, pokemon);
+    }
+    // Se o numero ja existe, nao insere (evita duplicatas)
+    else {
+        cout << "Pokemon com numero " << pokemon.numero << " ja existe na Pokedex!" << endl;
+    }
+    
+    return raiz;
+}
+
+// Funcao principal para cadastrar Pokemon (usa ABB)
+void cadastrarPokemon() { 
+    Pokemon novoPokemon;
+
+    cout << "Informe o numero do Pokemon: ";
+    cin >> novoPokemon.numero;
+    
+    cin.ignore(); // Limpa o buffer do teclado
+    cout << "Informe o nome do Pokemon: ";
+    getline(cin, novoPokemon.nome);
+    
+    cout << "Informe o tipo do Pokemon: ";
+    getline(cin, novoPokemon.tipo);
+    
+    cout << "Informe a localizacao (X Y): ";
+    cin >> novoPokemon.loc_x >> novoPokemon.loc_y;
+    
+    // Insere o pokemon na arvore binaria de busca
+    raizPokedex = inserirNaArvore(raizPokedex, novoPokemon);
+    
+    cout << "Pokemon " << novoPokemon.nome << " cadastrado com sucesso!" << endl;
+}
+
+// Funcao auxiliar recursiva para buscar um Pokemon pelo numero
+NoPokemon* buscarPokemon(NoPokemon* raiz, int numero) {
+    // Caso base: arvore vazia ou Pokemon encontrado
+    if (raiz == nullptr || raiz->dados.numero == numero) {
+        return raiz;
+    }
+    
+    // Se o numero procurado e menor, busca na subarvore esquerda
+    if (numero < raiz->dados.numero) {
+        return buscarPokemon(raiz->esquerda, numero);
+    }
+    
+    // Senao, busca na subarvore direita
+    return buscarPokemon(raiz->direita, numero);
+}
+
+// Funcao auxiliar para encontrar o menor valor (mais a esquerda)
+NoPokemon* encontrarMinimo(NoPokemon* raiz) {
+    while (raiz->esquerda != nullptr) {
+        raiz = raiz->esquerda;
+    }
+    return raiz;
+}
+
+// Funcao auxiliar recursiva para remover um Pokemon da arvore
+NoPokemon* removerDaArvore(NoPokemon* raiz, int numero) {
+    if (raiz == nullptr) {
+        return raiz;
+    }
+    
+    // Procura o no a ser removido
+    if (numero < raiz->dados.numero) {
+        raiz->esquerda = removerDaArvore(raiz->esquerda, numero);
+    }
+    else if (numero > raiz->dados.numero) {
+        raiz->direita = removerDaArvore(raiz->direita, numero);
+    }
+    // No encontrado
+    else {
+        // Caso 1: No sem filhos ou com apenas um filho
+        if (raiz->esquerda == nullptr) {
+            NoPokemon* temp = raiz->direita;
+            delete raiz;
+            return temp;
+        }
+        else if (raiz->direita == nullptr) {
+            NoPokemon* temp = raiz->esquerda;
+            delete raiz;
+            return temp;
+        }
+        
+        // Caso 2: No com dois filhos
+        // Encontra o sucessor (menor valor na subarvore direita)
+        NoPokemon* temp = encontrarMinimo(raiz->direita);
+        
+        // Copia os dados do sucessor para este no
+        raiz->dados = temp->dados;
+        
+        // Remove o sucessor
+        raiz->direita = removerDaArvore(raiz->direita, temp->dados.numero);
+    }
+    
+    return raiz;
+}
+
+// --- Fim da Entrega 3 ---
+
+// Stubs (funcionalidades em construcao)
+void removerPokemon() { 
+    if (raizPokedex == nullptr) {
+        cout << "Nenhum Pokemon cadastrado na Pokedex." << endl;
+        return;
+    }
+    
+    int numero;
+    cout << "Informe o numero do Pokemon a ser removido: ";
+    cin >> numero;
+    
+    NoPokemon* pokemon = buscarPokemon(raizPokedex, numero);
+    if (pokemon == nullptr) {
+        cout << "Pokemon nao encontrado!" << endl;
+        return;
+    }
+    
+    cout << "Removendo Pokemon: " << pokemon->dados.nome << endl;
+    raizPokedex = removerDaArvore(raizPokedex, numero);
+    cout << "Pokemon removido com sucesso!" << endl;
+}
+
+void listarPokemonsNome() { cout << "Funcionalidade em construcao..." << endl; }
+void listarPokemonsTipo() { cout << "Funcionalidade em construcao..." << endl; }
+void contarPokemonsTipo() { cout << "Funcionalidade em construcao..." << endl; }
+void encontrarPokemonsProximos() { cout << "Funcionalidade em construcao..." << endl; }
 
 
 // Funcao principal para exibir menu e chamar as funcoes conforme a escolha
