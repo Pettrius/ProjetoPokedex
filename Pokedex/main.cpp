@@ -6,6 +6,7 @@ SOLANGE RIBEIRO DA FONSECA - 528 - GES
 
 #include <iostream>  
 #include <string>  
+#include <cmath>
   
 using namespace std;
 
@@ -33,6 +34,25 @@ struct NoPokemon
 
 // Raiz da arvore (inicialmente vazia)
 NoPokemon* raizPokedex = nullptr;
+
+// --- NOVAS ESTRUTURAS: Arvores Auxiliares para Nome e Tipo ---
+
+// No para arvore ordenada por nome
+struct NoNome {
+    Pokemon dados;
+    NoNome* esquerda;
+    NoNome* direita;
+};
+
+// No para arvore ordenada por tipo
+struct NoTipo {
+    Pokemon dados;
+    NoTipo* esquerda;
+    NoTipo* direita;
+};
+
+NoNome* raizNome = nullptr;
+NoTipo* raizTipo = nullptr;
 
 // --- FIM DA ENTREGA 3 ---
 
@@ -292,6 +312,76 @@ NoPokemon* inserirNaArvore(NoPokemon* raiz, Pokemon pokemon) {
     return raiz;
 }
 
+// --- FUNCOES AUXILIARES PARA ARVORES POR NOME E TIPO ---
+
+// Inserir na arvore ordenada por nome
+NoNome* inserirPorNome(NoNome* raiz, Pokemon pokemon) {
+    if (raiz == nullptr) {
+        NoNome* novoNo = new NoNome;
+        novoNo->dados = pokemon;
+        novoNo->esquerda = nullptr;
+        novoNo->direita = nullptr;
+        return novoNo;
+    }
+    
+    if (pokemon.nome < raiz->dados.nome) {
+        raiz->esquerda = inserirPorNome(raiz->esquerda, pokemon);
+    }
+    else {
+        raiz->direita = inserirPorNome(raiz->direita, pokemon);
+    }
+    
+    return raiz;
+}
+
+// Inserir na arvore ordenada por tipo
+NoTipo* inserirPorTipo(NoTipo* raiz, Pokemon pokemon) {
+    if (raiz == nullptr) {
+        NoTipo* novoNo = new NoTipo;
+        novoNo->dados = pokemon;
+        novoNo->esquerda = nullptr;
+        novoNo->direita = nullptr;
+        return novoNo;
+    }
+    
+    if (pokemon.tipo < raiz->dados.tipo) {
+        raiz->esquerda = inserirPorTipo(raiz->esquerda, pokemon);
+    }
+    else {
+        raiz->direita = inserirPorTipo(raiz->direita, pokemon);
+    }
+    
+    return raiz;
+}
+
+// Reconstruir arvores auxiliares a partir da arvore principal
+void reconstruirArvoresAuxiliares(NoPokemon* raiz) {
+    if (raiz != nullptr) {
+        reconstruirArvoresAuxiliares(raiz->esquerda);
+        raizNome = inserirPorNome(raizNome, raiz->dados);
+        raizTipo = inserirPorTipo(raizTipo, raiz->dados);
+        reconstruirArvoresAuxiliares(raiz->direita);
+    }
+}
+
+// Limpar arvore de nomes
+void limparArvoreNome(NoNome* raiz) {
+    if (raiz != nullptr) {
+        limparArvoreNome(raiz->esquerda);
+        limparArvoreNome(raiz->direita);
+        delete raiz;
+    }
+}
+
+// Limpar arvore de tipos
+void limparArvoreTipo(NoTipo* raiz) {
+    if (raiz != nullptr) {
+        limparArvoreTipo(raiz->esquerda);
+        limparArvoreTipo(raiz->direita);
+        delete raiz;
+    }
+}
+
 // Funcao principal para cadastrar Pokemon (usa ABB)
 void cadastrarPokemon() { 
     Pokemon novoPokemon;
@@ -311,6 +401,13 @@ void cadastrarPokemon() {
     
     // Insere o pokemon na arvore binaria de busca
     raizPokedex = inserirNaArvore(raizPokedex, novoPokemon);
+    
+    // Atualiza as arvores auxiliares
+    limparArvoreNome(raizNome);
+    limparArvoreTipo(raizTipo);
+    raizNome = nullptr;
+    raizTipo = nullptr;
+    reconstruirArvoresAuxiliares(raizPokedex);
     
     cout << "Pokemon " << novoPokemon.nome << " cadastrado com sucesso!" << endl;
 }
@@ -380,35 +477,202 @@ NoPokemon* removerDaArvore(NoPokemon* raiz, int numero) {
     return raiz;
 }
 
-// --- Fim da Entrega 3 ---
+// --- FUNCIONALIDADES NOVAS (Entrega 4) ---
 
-// Stubs (funcionalidades em construcao)
+// FUNCIONALIDADE 1: Listar Pokemons por Nome (usando ABB ordenada por nome)
+void imprimirInOrderNome(NoNome* raiz) {
+    if (raiz != nullptr) {
+        imprimirInOrderNome(raiz->esquerda);
+        cout << "Nome: " << raiz->dados.nome
+             << " | Numero: " << raiz->dados.numero 
+             << " | Tipo: " << raiz->dados.tipo
+             << " | Localizacao: (" << raiz->dados.loc_x << ", " << raiz->dados.loc_y << ")"
+             << endl;
+        imprimirInOrderNome(raiz->direita);
+    }
+}
+
+int contarNos(NoNome* raiz) {
+    if (raiz == nullptr) return 0;
+    return 1 + contarNos(raiz->esquerda) + contarNos(raiz->direita);
+}
+
+void listarPokemonsNome() { 
+    if (raizPokedex == nullptr) {
+        cout << "Nenhum Pokemon cadastrado na Pokedex." << endl;
+        return;
+    }
+    
+    // Reconstroi arvore por nome
+    limparArvoreNome(raizNome);
+    raizNome = nullptr;
+    reconstruirArvoresAuxiliares(raizPokedex);
+    
+    cout << "\n=== POKEMONS ORDENADOS POR NOME ===" << endl;
+    imprimirInOrderNome(raizNome);
+    cout << "\nTotal: " << contarNos(raizNome) << " Pokemon(s)" << endl;
+}
+
+// FUNCIONALIDADE 2: Remover Pokemon pelo nome (usando busca recursiva)
+NoPokemon* buscarPokemonPorNome(NoPokemon* raiz, string nome, int &numeroEncontrado) {
+    if (raiz == nullptr) {
+        return nullptr;
+    }
+    
+    // Verifica se o nome corresponde
+    if (raiz->dados.nome == nome) {
+        numeroEncontrado = raiz->dados.numero;
+        return raiz;
+    }
+    
+    // Busca na subarvore esquerda
+    NoPokemon* resultado = buscarPokemonPorNome(raiz->esquerda, nome, numeroEncontrado);
+    if (resultado != nullptr) {
+        return resultado;
+    }
+    
+    // Busca na subarvore direita
+    return buscarPokemonPorNome(raiz->direita, nome, numeroEncontrado);
+}
+
 void removerPokemon() { 
     if (raizPokedex == nullptr) {
         cout << "Nenhum Pokemon cadastrado na Pokedex." << endl;
         return;
     }
     
-    int numero;
-    cout << "Informe o numero do Pokemon a ser removido: ";
-    cin >> numero;
+    string nome;
+    cin.ignore();
+    cout << "Informe o nome do Pokemon a ser remover: ";
+    getline(cin, nome);
     
-    NoPokemon* pokemon = buscarPokemon(raizPokedex, numero);
+    int numeroEncontrado = -1;
+    NoPokemon* pokemon = buscarPokemonPorNome(raizPokedex, nome, numeroEncontrado);
+    
     if (pokemon == nullptr) {
-        cout << "Pokemon nao encontrado!" << endl;
+        cout << "Pokemon '" << nome << "' nao encontrado!" << endl;
         return;
     }
     
-    cout << "Removendo Pokemon: " << pokemon->dados.nome << endl;
-    raizPokedex = removerDaArvore(raizPokedex, numero);
+    cout << "Removendo Pokemon: " << pokemon->dados.nome 
+         << " (Numero: " << pokemon->dados.numero << ")" << endl;
+    raizPokedex = removerDaArvore(raizPokedex, numeroEncontrado);
+    
+    // Atualiza arvores auxiliares
+    limparArvoreNome(raizNome);
+    limparArvoreTipo(raizTipo);
+    raizNome = nullptr;
+    raizTipo = nullptr;
+    reconstruirArvoresAuxiliares(raizPokedex);
+    
     cout << "Pokemon removido com sucesso!" << endl;
 }
 
-void listarPokemonsNome() { cout << "Funcionalidade em construcao..." << endl; }
-void listarPokemonsTipo() { cout << "Funcionalidade em construcao..." << endl; }
-void contarPokemonsTipo() { cout << "Funcionalidade em construcao..." << endl; }
-void encontrarPokemonsProximos() { cout << "Funcionalidade em construcao..." << endl; }
+// FUNCIONALIDADE 3: Listar Pokemons por Tipo (usando ABB ordenada por tipo)
+void imprimirInOrderTipo(NoTipo* raiz) {
+    if (raiz != nullptr) {
+        imprimirInOrderTipo(raiz->esquerda);
+        cout << "Tipo: " << raiz->dados.tipo
+             << " | Nome: " << raiz->dados.nome
+             << " | Numero: " << raiz->dados.numero 
+             << " | Localizacao: (" << raiz->dados.loc_x << ", " << raiz->dados.loc_y << ")"
+             << endl;
+        imprimirInOrderTipo(raiz->direita);
+    }
+}
 
+int contarNosTipo(NoTipo* raiz) {
+    if (raiz == nullptr) return 0;
+    return 1 + contarNosTipo(raiz->esquerda) + contarNosTipo(raiz->direita);
+}
+
+void listarPokemonsTipo() { 
+    if (raizPokedex == nullptr) {
+        cout << "Nenhum Pokemon cadastrado na Pokedex." << endl;
+        return;
+    }
+    
+    // Reconstroi arvore por tipo
+    limparArvoreTipo(raizTipo);
+    raizTipo = nullptr;
+    reconstruirArvoresAuxiliares(raizPokedex);
+    
+    cout << "\n=== POKEMONS ORDENADOS POR TIPO ===" << endl;
+    imprimirInOrderTipo(raizTipo);
+    cout << "\nTotal: " << contarNosTipo(raizTipo) << " Pokemon(s)" << endl;
+}
+
+// FUNCIONALIDADE 4: Contar Pokemons de um tipo (usando busca recursiva na arvore)
+void contarEListarPorTipo(NoPokemon* raiz, string tipo, int &contador) {
+    if (raiz != nullptr) {
+        contarEListarPorTipo(raiz->esquerda, tipo, contador);
+        
+        if (raiz->dados.tipo == tipo) {
+            cout << "- " << raiz->dados.nome 
+                 << " (Numero: " << raiz->dados.numero << ")" << endl;
+            contador++;
+        }
+        
+        contarEListarPorTipo(raiz->direita, tipo, contador);
+    }
+}
+
+void contarPokemonsTipo() { 
+    if (raizPokedex == nullptr) {
+        cout << "Nenhum Pokemon cadastrado na Pokedex." << endl;
+        return;
+    }
+    
+    string tipo;
+    cin.ignore();
+    cout << "Informe o tipo de Pokemon: ";
+    getline(cin, tipo);
+    
+    int contador = 0;
+    cout << "\n=== POKEMONS DO TIPO " << tipo << " ===" << endl;
+    contarEListarPorTipo(raizPokedex, tipo, contador);
+    
+    cout << "\nTotal de Pokemon(s) do tipo " << tipo << ": " << contador << endl;
+}
+
+// FUNCIONALIDADE 5: Encontrar Pokemons proximos (busca recursiva na arvore)
+void buscarPokemonsProximos(NoPokemon* raiz, int x, int y, int &contador) {
+    if (raiz != nullptr) {
+        buscarPokemonsProximos(raiz->esquerda, x, y, contador);
+        
+        // Calcula a distancia euclidiana
+        double distancia = sqrt(pow(raiz->dados.loc_x - x, 2) + pow(raiz->dados.loc_y - y, 2));
+        
+        if (distancia <= 100.0) {
+            cout << "- " << raiz->dados.nome 
+                 << " (" << raiz->dados.tipo << ")"
+                 << " | Localizacao: (" << raiz->dados.loc_x << ", " << raiz->dados.loc_y << ")"
+                 << " | Distancia: " << distancia << " metros" << endl;
+            contador++;
+        }
+        
+        buscarPokemonsProximos(raiz->direita, x, y, contador);
+    }
+}
+
+void encontrarPokemonsProximos() { 
+    if (raizPokedex == nullptr) {
+        cout << "Nenhum Pokemon cadastrado na Pokedex." << endl;
+        return;
+    }
+    
+    int x, y;
+    cout << "Informe a localizacao atual (X Y): ";
+    cin >> x >> y;
+    
+    int contador = 0;
+    cout << "\n=== POKEMONS PROXIMOS (Raio: 100 metros) ===" << endl;
+    buscarPokemonsProximos(raizPokedex, x, y, contador);
+    
+    cout << "\nTotal de Pokemon(s) proximos: " << contador << endl;
+}
+
+// --- Fim das Funcionalidades Novas ---
 
 // Funcao principal para exibir menu e chamar as funcoes conforme a escolha
 int main()
